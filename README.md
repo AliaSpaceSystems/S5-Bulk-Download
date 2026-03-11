@@ -41,6 +41,26 @@ END_DATE=""
 MODE=""
 ```
 
-Usually you would put into the config file the parameters that do not need to be changed, as the SERVICE_URL, the AUTH_URL, the CLIENT_ID, the FOLDER_NAME and the credentials (USERNAME and PASSWORD). 
+Usually you would put into the config file the parameters that do not need to be changed, as the SERVICE_URL, the AUTH_URL, the CLIENT_ID, the FOLDER_NAME and the credentials (USERNAME and PASSWORD).
+
 You can choose whether to put the PRODUCT_TYPE, the START_DATE and the END_DATE into the config file or to pass them as parameters, depending on how is convenient for your case.
 
+- Run:
+```bash
+./s5_bulk_download.py -h
+```
+to show the help.
+
+- Run:
+```bash
+./s5_bulk_download.py -m test <other-parameters>
+```
+
+to perform a dry run which will report how many products have been found with the given parameters, without downloading them.
+
+- Example use:
+```bash
+./s5_bulk_download.py -s 2026-03-03 -e 2026-03-05 -t "SN5 L1B IRR"
+```
+
+to download all products with ProductType == "SN5 L1B IRR" and with PublicationDate between 2026-03-03 and 2026-03-05, and save them into the folder set inside the config file, or if not set, inside the default folder which is "./downloads"
