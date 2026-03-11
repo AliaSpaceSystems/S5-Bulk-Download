@@ -15,7 +15,9 @@ total_size = 0
 
 MAX_THREADS = 8
 
-def load_config(path="config.env"):
+def load_config(path=None):
+    if path is None:
+        path = "config-dev.env" if os.getenv("ENV") == "DEV" else "config.env"
     base = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(base, path)
     config = {}
