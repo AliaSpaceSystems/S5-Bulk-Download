@@ -3,12 +3,11 @@ import os
 import sys
 import requests
 import threading
+import time
+import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-#test:
-import json
-
-products = []
+products_list = []
 progress_lock = threading.Lock()
 downloaded_total = 0
 total_size = 0
@@ -88,57 +87,93 @@ def fetch_products(service_url, token, product_type, start_date, end_date):
         sys.exit(1)
 
 def print_progress():
-    global downloaded_total, total_size, products
+    global downloaded_total, total_size, products_list
+
     bar_len = 40
-    lines_printed = 0
-    
-    # Single products:
-    for p in products:
-        percent = p.get('Percent', 0)
+    lines = [f"Downloading products:"]
+
+    # products
+    for p in products_list:
+        percent = p.get("Percent", 0)
         filled = int(bar_len * percent)
         bar = "#" * filled + "-" * (bar_len - filled)
-        sys.stdout.write(f"Product {p['Id']}: [{bar}] {percent*100:5.1f}%\n")
-        lines_printed += 1
+        lines.append(f"- {p['Name']}: [{bar}] {percent*100:5.1f}%")
+
+    # total
+    percent_total = downloaded_total / total_size if total_size else 0
+    filled = int(bar_len * percent_total)
+    bar_total = "#" * filled + "-" * (bar_len - filled)
+    lines.append(f"")
+    lines.append(f"Total progress: [{bar_total}] {percent_total*100:5.1f}%")
+
+    with progress_lock:
+        sys.stdout.write(f"\033[{len(lines)}F")
+        for line in lines:
+            sys.stdout.write("\033[K")  # clear line
+            sys.stdout.write(line + "\n")
+        sys.stdout.flush()
     
-    # Total:
-    percent = downloaded_total / total_size
-    filled = int(bar_len * percent)
-    bar = "#" * filled + "-" * (bar_len - filled)
-    sys.stdout.write(f"Total progress: [{bar}] {percent*100:5.1f}%\n")
-    lines_printed += 1
     
-    sys.stdout.write(f"\033[{lines_printed}F")
-    sys.stdout.flush()
-    
-    
-def download_product(service_url, product, token, folder, total_size):
+def download_product(service_url, product, token, folder, finished_messages):
     global downloaded_total
 
     url = f"{service_url}/Products({product['Id']})/$value"
     filename = os.path.join(folder, product['Name'])
     headers = {"Authorization": f"Bearer {token}"}
 
-    r = requests.get(url, headers=headers, stream=True)
-    r.raise_for_status()
-    downloaded = 0
+    try:
+        r = requests.get(url, headers=headers, stream=True)
+        r.raise_for_status()
+        downloaded = 0
+        chunk_count = 0
+        
+        with open(filename, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                if not chunk:
+                    continue
+                f.write(chunk)
+                downloaded += len(chunk)
+                chunk_count += 1
 
-    with open(filename, "wb") as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            if not chunk:
-                continue
+                with progress_lock:
+                    product['Percent'] = downloaded / product['Size']
+                    downloaded_total += len(chunk)
+                    
+                if chunk_count % 10 == 0:
+                    print_progress()
+            
+        product['Percent'] = 1
+        print_progress()
+        
+        # File was correctly downloaded
+        msg = f"SUCCESS: Downloaded {filename}"
+        finished_messages.append(msg)
+        return msg
+    except Exception as e:
+        with progress_lock:
+            product['Percent'] = downloaded / product['Size'] if downloaded else 0
+            print_progress()
 
-            f.write(chunk)
-            downloaded += len(chunk)
-            product['Percent'] = downloaded / product['Size'] * 100 if product['Size'] else 0
+        msg = f"FAILED: {filename} - {e}"
+        finished_messages.append(msg)
+        return msg
+      
 
-            with progress_lock:
-                downloaded_total += len(chunk)
-                print_progress()
-
-    return f"Downloaded {filename}"
-
+def human_readable_size(size_bytes):
+    for unit in ['B','KB','MB','GB','TB']:
+        if size_bytes < 1024:
+            return f"{size_bytes:.2f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.2f} PB"
+  
+def progress_thread_fn():
+    while any(p['Percent'] < 1 for p in products_list):
+        print_progress()
+        time.sleep(0.2)
+    print_progress()
+    
+  
 def main():
-
     parser = argparse.ArgumentParser(
       description="Download products from the S5 GSS corresponding to a given Product Type and included in a Publication Time window",
       formatter_class=argparse.RawTextHelpFormatter
@@ -173,7 +208,6 @@ def main():
 
     token = get_token(auth_url, username, password, client_id)
 
-    global products
     products = fetch_products(
         service_url,
         token,
@@ -184,14 +218,12 @@ def main():
 
     print(f"Products found: {len(products)}")
     
+    global products_list
     products_list = [
       {"Id": item["Id"], "Name": item["Name"], "Size": item["ContentLength"], "Percent": 0}
       for item in products
       if "Id" in item and "Name" in item
     ]
-     
-    #debug:
-    print(products_list)
     
     if mode == "test":
       print("This script was run in 'test' mode, so no download will be performed.")
@@ -201,16 +233,25 @@ def main():
           p['Size']
           for p in products_list
       )
-      print(f"total_size: {total_size}")
+      print(f"total_size: {total_size} - {human_readable_size(total_size)}")
+      for _ in range(len(products_list) + 4):
+          print()
+          
+      finished_messages = []
+      with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:          
+          futures = [executor.submit(download_product, service_url, p, token, folder, finished_messages) for p in products_list]
+
+          t = threading.Thread(target=progress_thread_fn)
+          t.start()
+
+          for future in futures:
+              future.result()
+              
+          t.join()
+          
       print()
-      with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-          futures = [
-              executor.submit(download_product, service_url, product, token, folder, total_size)
-              for product in products_list
-          ]
-          for future in as_completed(futures):
-              print(future.result())
-      print()
+      for msg in finished_messages:
+        print(msg)
 
 
 if __name__ == "__main__":
