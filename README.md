@@ -1,31 +1,46 @@
-*** S5 Bulk Download ***
+# S5 Bulk Download
 
-usage: s5_bulk_download.py [-h] [-t PRODUCT_TYPE] [-s YYYY-MM-DD] [-e YYYY-MM-DD] [-u USERNAME] [-p PASSWORD] [-f FOLDER_NAME] [-r http(s)//<gss-domain>/odata/v2]
-                           [-a http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token] [-c CLIENT_ID] [-m MODE]
+Download products from the S5 GSS corresponding to a given Product Type and included in a Publication Time window.
 
-Download products from the S5 GSS corresponding to a given Product Type and included in a Publication Time window
 
-options:
-  -h, --help            show this help message and exit
-  -t PRODUCT_TYPE, --product-type PRODUCT_TYPE
-                        Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR']
-                        or leave it empty to search for all product types
-  -s YYYY-MM-DD, --start-date YYYY-MM-DD
-                        Publication Start Date
-  -e YYYY-MM-DD, --end-date YYYY-MM-DD
-                        Publication End Date
-  -u USERNAME, --username USERNAME
-                        GSS authentication username
-  -p PASSWORD, --password PASSWORD
-                        GSS authentication password
-  -f FOLDER_NAME, --folder-name FOLDER_NAME
-                        Path to the folder to store the downloaded products.
-                        Leave it empty to use default './downloads'
-  -r http(s)//<gss-domain>/odata/v2, --service-url http(s)//<gss-domain>/odata/v2
-                        GSS url
-  -a http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token, --auth-url http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token
-                        GSS Auth url
-  -c CLIENT_ID, --client-id CLIENT_ID
-                        GSS Auth clientId
-  -m MODE, --mode MODE  Leave it empty for normal behavior.
-                        Set to 'test' for a dry run, which let you check all parameters, without downloading products
+## Version: 
+
+Version: 1.0.0
+
+
+## Install
+
+- Clone this repository anywhere in your machine:
+```bash
+git clone https://github.com/AliaSpaceSystems/S5-Bulk-Download.git
+cd S5-Bulk-Download
+```
+
+- Give s5_bulk_download.py execution permission with: 
+```bash
+chmod a+x s5_bulk_download.py
+```
+
+
+## Usage
+
+The script will download products, filtered by 'ProductType' and a 'PublicationDate' window, from an authenticated GSS containing S5 products and save them in a selected folder.
+In order to work you can choose to put the needed parameters in a config file, pass them as script parameters, or a mix of both ways. Keep in mind that script parameters have precedence over the config file.
+
+Empty config.env:
+```bash
+FOLDER_NAME=""
+USERNAME=""
+PASSWORD=""
+SERVICE_URL="http(s)://<gss-domain>/odata/v2"
+AUTH_URL="http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token"
+CLIENT_ID="<auth-client-id>"
+PRODUCT_TYPE=""
+START_DATE=""
+END_DATE=""
+MODE=""
+```
+
+Usually you would put into the config file the parameters that do not need to be changed, as the SERVICE_URL, the AUTH_URL, the CLIENT_ID, the FOLDER_NAME and the credentials (USERNAME and PASSWORD). 
+You can choose whether to put the PRODUCT_TYPE, the START_DATE and the END_DATE into the config file or to pass them as parameters, depending on how is convenient for your case.
+
