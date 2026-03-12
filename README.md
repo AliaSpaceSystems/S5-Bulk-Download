@@ -21,6 +21,11 @@ cd S5-Bulk-Download
 chmod a+x s5_bulk_download.py
 ```
 
+- Windows:
+The 'requests' library is needed for this app to run. If missing, you can install it with:
+```bash
+py -m pip install requests
+```
 
 ## Usage
 
