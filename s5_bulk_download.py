@@ -40,9 +40,11 @@ def load_config(path=None):
     return config
 
 
-def get_param(cli_value, config_value, name, required=True):
+def get_param(cli_value, config_value, name, required=True, default=None):
     val = cli_value if cli_value else config_value
     if required and not val:
+        if default:
+            return default
         print(f"Missing parameter: {name}")
         sys.exit(1)
     return val
@@ -187,7 +189,7 @@ def main():
     parser.add_argument("-e", "--end-date", help="Publication End Date", metavar="YYYY-MM-DD")
     parser.add_argument("-u", "--username", help="GSS authentication username")
     parser.add_argument("-p", "--password", help="GSS authentication password")
-    parser.add_argument("-f", "--folder-name", help="Path to the folder to store the downloaded products.\nLeave it empty to use default './downloads'", default="./downloads")
+    parser.add_argument("-f", "--folder-name", help="Path to the folder to store the downloaded products.\nLeave it empty to use default './downloads'")
     parser.add_argument("-r", "--service-url", help="GSS url", metavar="http(s)//<gss-domain>/odata/v2")
     parser.add_argument("-a", "--auth-url", help="GSS Auth url", metavar="http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token")
     parser.add_argument("-c", "--client-id", help="GSS Auth clientId")
@@ -196,7 +198,7 @@ def main():
     args = parser.parse_args()
     config = load_config()
 
-    folder = get_param(args.folder_name, config.get("FOLDER_NAME"), "folder-name")
+    folder = get_param(args.folder_name, config.get("FOLDER_NAME"), "folder-name", default="./downloads")
     username = get_param(args.username, config.get("USERNAME"), "username")
     password = get_param(args.password, config.get("PASSWORD"), "password")
     service_url = get_param(args.service_url, config.get("SERVICE_URL"), "service-url")
@@ -206,7 +208,7 @@ def main():
     start_date = get_param(args.start_date, config.get("START_DATE"), "start-date")
     end_date = get_param(args.end_date, config.get("END_DATE"), "end-date")
     mode = get_param(args.mode, config.get("MODE"), "mode", False)
-
+    
     os.makedirs(folder, exist_ok=True)
 
     token = get_token(auth_url, username, password, client_id)
