@@ -78,9 +78,10 @@ def fetch_products(service_url, token, product_type, start_date, end_date):
         
         data = r.json()       
         products = data.get("value", [])
-        #test:
-        with open("output.json", "w", encoding="utf-8") as f:
-          json.dump(products, f, indent=2, ensure_ascii=False)
+        
+        # debug - write products to a json file:
+        #with open("output.json", "w", encoding="utf-8") as f:
+        #  json.dump(products, f, indent=2, ensure_ascii=False)
     
         return products
 
@@ -242,13 +243,10 @@ def main():
       finished_messages = []
       with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:          
           futures = [executor.submit(download_product, service_url, p, token, folder, finished_messages) for p in products_list]
-
           t = threading.Thread(target=progress_thread_fn)
           t.start()
-
           for future in futures:
               future.result()
-              
           t.join()
           
       print()
