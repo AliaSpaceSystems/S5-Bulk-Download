@@ -41,6 +41,20 @@ END_DATE=""
 MODE=""
 ```
 
+Relation between script parameters and config parameters and their function:
+```bash
+FOLDER_NAME     -f --folder-name    : Path to the folder to store the downloaded products. Leave it empty to use default './downloads'
+USERNAME        -u --username       : GSS authentication username
+PASSWORD        -p --password       : GSS authentication password
+SERVICE_URL     -r -service-url     : GSS url, written following the model 'http(s)//<gss-domain>/odata/v2'
+AUTH_URL        -a --auth-url       : GSS Auth url, written following the model 'http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token'
+CLIENT_ID       -c --client-id      : GSS Auth clientId
+PRODUCT_TYPE    -t --product-type   : Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR'], or leave it empty to search for all product types
+START_DATE      -s --start-date     : Publication Start Date
+END_DATE        -e --end-date       : Publication End Date
+MODE            -m --mode           : Leave it empty for normal behavior. Set to 'test' for a dry run, which let you check all parameters, without downloading products
+```
+
 Usually you would put into the config file the parameters that do not need to be changed, as the SERVICE_URL, the AUTH_URL, the CLIENT_ID, the FOLDER_NAME and the credentials (USERNAME and PASSWORD).
 
 You can choose whether to put the PRODUCT_TYPE, the START_DATE and the END_DATE into the config file or to pass them as parameters, depending on how is convenient for your case.
