@@ -7,6 +7,7 @@ import requests
 import threading
 import time
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 products_list = []
@@ -16,6 +17,13 @@ total_size = 0
 
 MAX_THREADS = 8
 
+def get_version_from_readme(path="README.md"):
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(r"Version:\s*([0-9]+\.[0-9]+\.[0-9]+)", content)
+    return match.group(1) if match else None
+  
 def load_config(path=None):
     if path is None:
         path = "config-dev.env" if os.getenv("ENV") == "DEV" else "config.env"
@@ -186,6 +194,9 @@ def main():
       formatter_class=argparse.RawTextHelpFormatter
     )
 
+    version = get_version_from_readme()
+    
+    parser.add_argument("-v", "--version", action="version", version=f"S5-Bulk-Download script v{version}", help="Display script version")
     parser.add_argument("-t", "--product-type", help="Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR']\nor leave it empty to search for all product types")
     parser.add_argument("-s", "--start-date", help="Publication Start Date", metavar="YYYY-MM-DD")
     parser.add_argument("-e", "--end-date", help="Publication End Date", metavar="YYYY-MM-DD")
@@ -198,7 +209,7 @@ def main():
     parser.add_argument("-c", "--client-id", help="GSS Auth clientId")
     parser.add_argument("-m", "--mode", help="Leave it empty for normal behavior.\nSet to 'test' for a dry run, which let you check all parameters, without downloading products")
 
-    args = parser.parse_args()
+    args = parser.parse_args()    
     config = load_config()
 
     folder = get_param(args.folder_name, config.get("FOLDER_NAME"), "folder-name", default="./downloads")
