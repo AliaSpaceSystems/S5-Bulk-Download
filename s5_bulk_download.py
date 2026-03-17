@@ -68,12 +68,14 @@ def get_token(auth_url, username, password, clientId):
         sys.exit(1)
 
 
-def fetch_products(service_url, token, product_type, start_date, end_date):
+def fetch_products(service_url, token, product_type, start_date, end_date, baseline):
     try:
+        url = f"{service_url}/Products?$expand=Attributes&$filter=(PublicationDate ge {start_date}T00:00:00.000Z) and (PublicationDate le {end_date}T23:59:59.999Z)"
         if product_type != "":
-          url = f"{service_url}/Products?$expand=Attributes&$filter=(PublicationDate ge {start_date}T00:00:00.000Z) and (PublicationDate le {end_date}T23:59:59.999Z) and (Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq '{product_type}'))"
-        else:
-          url = f"{service_url}/Products?$expand=Attributes&$filter=(PublicationDate ge {start_date}T00:00:00.000Z) and (PublicationDate le {end_date}T23:59:59.999Z)"
+          url += f" and (Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'productType' and att/OData.CSC.StringAttribute/Value eq '{product_type}'))"
+        if baseline != "":
+          url += f" and (Attributes/OData.CSC.StringAttribute/any(att:att/Name eq 'processingBaseline' and att/OData.CSC.StringAttribute/Value eq '{baseline}'))"
+
         headers = {"Authorization": f"Bearer {token}"}
         r = requests.get(url, headers=headers)
         r.raise_for_status()
@@ -187,6 +189,7 @@ def main():
     parser.add_argument("-t", "--product-type", help="Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR']\nor leave it empty to search for all product types")
     parser.add_argument("-s", "--start-date", help="Publication Start Date", metavar="YYYY-MM-DD")
     parser.add_argument("-e", "--end-date", help="Publication End Date", metavar="YYYY-MM-DD")
+    parser.add_argument("-b", "--baseline", help="Processing Baseline")
     parser.add_argument("-u", "--username", help="GSS authentication username")
     parser.add_argument("-p", "--password", help="GSS authentication password")
     parser.add_argument("-f", "--folder-name", help="Path to the folder to store the downloaded products.\nLeave it empty to use default './downloads'")
@@ -207,6 +210,7 @@ def main():
     product_type = get_param(args.product_type, config.get("PRODUCT_TYPE"), "product-type", False)
     start_date = get_param(args.start_date, config.get("START_DATE"), "start-date")
     end_date = get_param(args.end_date, config.get("END_DATE"), "end-date")
+    baseline = get_param(args.baseline, config.get("BASELINE"), "baseline", False)
     mode = get_param(args.mode, config.get("MODE"), "mode", False)
     
     os.makedirs(folder, exist_ok=True)
@@ -218,7 +222,8 @@ def main():
         token,
         product_type,
         start_date,
-        end_date
+        end_date,
+        baseline
     )
 
     print(f"Products found: {len(products)}")

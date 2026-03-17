@@ -5,7 +5,7 @@ Download products from the S5 GSS corresponding to a given Product Type and incl
 
 ## Version: 
 
-Version: 1.0.0
+Version: 1.0.1
 
 
 ## Install
@@ -43,6 +43,7 @@ CLIENT_ID="<auth-client-id>"
 PRODUCT_TYPE=""
 START_DATE=""
 END_DATE=""
+BASELINE=""
 MODE=""
 ```
 
@@ -57,6 +58,7 @@ CLIENT_ID       -c --client-id      : GSS Auth clientId
 PRODUCT_TYPE    -t --product-type   : Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR'], or leave it empty to search for all product types
 START_DATE      -s --start-date     : Publication Start Date
 END_DATE        -e --end-date       : Publication End Date
+BASELINE        -b --baseline       : Processing Baseline
 MODE            -m --mode           : Leave it empty for normal behavior. Set to 'test' for a dry run, which let you check all parameters, without downloading products
 ```
 
