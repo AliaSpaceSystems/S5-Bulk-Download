@@ -206,9 +206,6 @@ def md5_file(path):
 
 def verify_md5(path, expected_md5):
   calc_md5 = md5_file(path)
-  # with open("output_md5.txt", "a", encoding="utf-8") as f:
-  #   f.write(f"Calc md5: {calc_md5}\n")
-  #   f.write(f"Prod md5: {expected_md5.lower()}\n")
   return calc_md5.lower() == expected_md5.lower()
   
     
@@ -240,8 +237,9 @@ def download_product(service_url, product, token, folder, finished_messages):
         if chunk_count % 10 == 0:
           print_progress()
           
-    if not verify_md5(f.name, temp_md5):
-      msg = f"Error: Checksum is not valid for product: {product['Name']}"
+    if not verify_md5(filename, temp_md5):
+      os.remove(filename)
+      msg = f"ERROR: Checksum is not valid for product: {product['Name']}"
       finished_messages.append(msg)
       return msg
       
@@ -249,7 +247,7 @@ def download_product(service_url, product, token, folder, finished_messages):
     print_progress()
     
     # File was correctly downloaded
-    msg = f"SUCCESS: Downloaded {filename}"
+    msg = f"SUCCESS: {filename} has been correctly downladed and checked"
     finished_messages.append(msg)
     return msg
   except Exception as e:
