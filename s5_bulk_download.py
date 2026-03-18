@@ -176,18 +176,7 @@ def fetch_products(service_url, token, filter):
     r.raise_for_status()
     
     data = r.json()       
-    products = data.get("value", [])
-    
-    # debug - write products to a json file:
-    #with open("output.json", "w", encoding="utf-8") as f:
-    #  json.dump(products, f, indent=2, ensure_ascii=False)
-    
-    # Test rename 1 product Id for testing retries.
-    for product in products:
-      if "20260316070937" in product['Name'] or "20260313063126" in product['Name']:
-        product['Id'] = product['Id'][:-4] + "1234"
-        print(f"Found 1 with name: {product['Name']}\n\n\n")
-        
+    products = data.get("value", [])        
 
     return products
 
