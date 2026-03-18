@@ -11,12 +11,20 @@ import re
 import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# Loading script settings:
+settings = {}
+settings_path = "settings.json"
+if not os.path.exists(settings_path):
+  raise FileNotFoundError(f"{settings_path} not found")
+with open(settings_path, "r", encoding="utf-8") as f:
+  settings = json.load(f)
+  
 products_list = []
 progress_lock = threading.Lock()
 downloaded_total = 0
 total_size = 0
 
-MAX_THREADS = 8
+MAX_THREADS = settings.get("max-threads", 8)
 
 def get_version_from_readme(path="README.md"):
   with open(path, "r", encoding="utf-8") as f:
