@@ -8,6 +8,7 @@ import threading
 import time
 import json
 import re
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 products_list = []
@@ -196,6 +197,21 @@ def print_progress():
     sys.stdout.flush()
     
     
+def md5_file(path):
+  hash_md5 = hashlib.md5()
+  with open(path, "rb") as f:
+    for chunk in iter(lambda: f.read(8192), b""):
+      hash_md5.update(chunk)
+  return hash_md5.hexdigest()
+
+def verify_md5(path, expected_md5):
+  calc_md5 = md5_file(path)
+  # with open("output_md5.txt", "a", encoding="utf-8") as f:
+  #   f.write(f"Calc md5: {calc_md5}\n")
+  #   f.write(f"Prod md5: {expected_md5.lower()}\n")
+  return calc_md5.lower() == expected_md5.lower()
+  
+    
 def download_product(service_url, product, token, folder, finished_messages):
   global downloaded_total
 
@@ -208,7 +224,7 @@ def download_product(service_url, product, token, folder, finished_messages):
     r.raise_for_status()
     downloaded = 0
     chunk_count = 0
-    
+    temp_md5 = product['Checksum'][0]['Value']
     with open(filename, "wb") as f:
       for chunk in r.iter_content(chunk_size=8192):
         if not chunk:
@@ -223,6 +239,11 @@ def download_product(service_url, product, token, folder, finished_messages):
             
         if chunk_count % 10 == 0:
           print_progress()
+          
+    if not verify_md5(f.name, temp_md5):
+      msg = f"Error: Checksum is not valid for product: {product['Name']}"
+      finished_messages.append(msg)
+      return msg
       
     product['Percent'] = 1
     print_progress()
@@ -253,7 +274,7 @@ def progress_thread_fn():
     print_progress()
     time.sleep(0.2)
   print_progress()
-    
+
   
 def main():
   parser = argparse.ArgumentParser(
@@ -319,9 +340,9 @@ def main():
   
   global products_list
   products_list = [
-    {"Id": item["Id"], "Name": item["Name"], "Size": item["ContentLength"], "Percent": 0}
+    {"Id": item["Id"], "Name": item["Name"], "Size": item["ContentLength"], "Checksum": item['Checksum'], "Percent": 0}
     for item in products
-    if "Id" in item and "Name" in item
+    if "Id" in item and "Name" in item and "Checksum" in item
   ]
   
   if mode == "test":
