@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from datetime import datetime
 import argparse
 import os
 import sys
@@ -9,6 +10,7 @@ import time
 import json
 import re
 import hashlib
+import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Loading script settings:
@@ -18,13 +20,24 @@ if not os.path.exists(settings_path):
   raise FileNotFoundError(f"{settings_path} not found")
 with open(settings_path, "r", encoding="utf-8") as f:
   settings = json.load(f)
-  
+
+ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+os.makedirs(settings['log_folder'], exist_ok=True)
+log_path = os.path.join(settings['log_folder'], f"output_{ts}.log")
+logging.basicConfig(
+  filename=log_path,
+  level=logging.INFO,
+  format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
 products_list = []
 progress_lock = threading.Lock()
 downloaded_total = 0
 total_size = 0
 
 MAX_THREADS = settings.get("max-threads", 8)
+MAX_RETRIES = settings.get("max-retries", 3)
+RETRY_DELAY = settings.get("retry-delay", 5)
 
 def get_version_from_readme(path="README.md"):
   with open(path, "r", encoding="utf-8") as f:
@@ -56,7 +69,6 @@ def load_config(path=None):
       config[key.strip()] = value
   return config
 
-
 def get_param(cli_value, config_value, name, required=True, default=None):
   val = cli_value if cli_value else config_value
   if required and not val:
@@ -65,7 +77,6 @@ def get_param(cli_value, config_value, name, required=True, default=None):
     print(f"Missing parameter: {name}")
     sys.exit(1)
   return val
-
 
 def get_token(auth_url, username, password, clientId):
   try:
@@ -170,6 +181,13 @@ def fetch_products(service_url, token, filter):
     # debug - write products to a json file:
     #with open("output.json", "w", encoding="utf-8") as f:
     #  json.dump(products, f, indent=2, ensure_ascii=False)
+    
+    # Test rename 1 product Id for testing retries.
+    for product in products:
+      if "20260316070937" in product['Name'] or "20260313063126" in product['Name']:
+        product['Id'] = product['Id'][:-4] + "1234"
+        print(f"Found 1 with name: {product['Name']}\n\n\n")
+        
 
     return products
 
@@ -182,13 +200,12 @@ def print_progress():
 
   bar_len = 40
   lines = [f"Downloading products:"]
-
   # products
   for p in products_list:
     percent = p.get("Percent", 0)
     filled = int(bar_len * percent)
     bar = "#" * filled + "-" * (bar_len - filled)
-    lines.append(f"- {p['Name']}: [{bar}] {percent*100:5.1f}%")
+    lines.append(f"- {p['Name']}: [{bar}] {percent*100:5.1f}% - attempt n.{p['Retry'] + 1}")
 
   # total
   percent_total = downloaded_total / total_size if total_size else 0
@@ -203,8 +220,7 @@ def print_progress():
       sys.stdout.write("\033[K")  # clear line
       sys.stdout.write(line + "\n")
     sys.stdout.flush()
-    
-    
+      
 def md5_file(path):
   hash_md5 = hashlib.md5()
   with open(path, "rb") as f:
@@ -215,57 +231,68 @@ def md5_file(path):
 def verify_md5(path, expected_md5):
   calc_md5 = md5_file(path)
   return calc_md5.lower() == expected_md5.lower()
-  
-    
+   
 def download_product(service_url, product, token, folder, finished_messages):
   global downloaded_total
-
   url = f"{service_url}/Products({product['Id']})/$value"
   filename = os.path.join(folder, product['Name'])
   headers = {"Authorization": f"Bearer {token}"}
 
-  try:
-    r = requests.get(url, headers=headers, stream=True)
-    r.raise_for_status()
+  for attempt in range(1, MAX_RETRIES + 1):
     downloaded = 0
-    chunk_count = 0
-    temp_md5 = product['Checksum'][0]['Value']
-    with open(filename, "wb") as f:
-      for chunk in r.iter_content(chunk_size=8192):
-        if not chunk:
-          continue
-        f.write(chunk)
-        downloaded += len(chunk)
-        chunk_count += 1
+    try:
+      with requests.get(url, headers=headers, stream=True, timeout=(5, 10)) as r:  # timeout=(connection, reading"chunk") 
+        r.raise_for_status()
+        chunk_count = 0
+        temp_md5 = product['Checksum'][0]['Value']
+        
+        with open(filename, "wb") as f:
+          for chunk in r.iter_content(chunk_size=8192):
+            if not chunk:
+              continue
+            f.write(chunk)
+            downloaded += len(chunk)
+            chunk_count += 1
 
-        with progress_lock:
-          product['Percent'] = downloaded / product['Size']
-          downloaded_total += len(chunk)
-            
-        if chunk_count % 10 == 0:
-          print_progress()
+            with progress_lock:
+              product['Percent'] = downloaded / product['Size']
+              downloaded_total += len(chunk)
+                
+            if chunk_count % 10 == 0:
+              print_progress()
+              
+        if not verify_md5(filename, temp_md5):
+          os.remove(filename)
+          msg = f"ERROR: Checksum is not valid for product: {product['Name']}"
+          finished_messages.append(msg)
+          return msg
           
-    if not verify_md5(filename, temp_md5):
-      os.remove(filename)
-      msg = f"ERROR: Checksum is not valid for product: {product['Name']}"
-      finished_messages.append(msg)
-      return msg
-      
-    product['Percent'] = 1
-    print_progress()
+        product['Percent'] = 1
+        product['Status'] = "success"
+        print_progress()
+        
+        logging.info(f"File: {product['Name']} has been correctly downloaded and checked")
+        msg = f"SUCCESS: {filename} has been correctly downladed and checked"
+        finished_messages.append(msg)
+        return msg
     
-    # File was correctly downloaded
-    msg = f"SUCCESS: {filename} has been correctly downladed and checked"
-    finished_messages.append(msg)
-    return msg
-  except Exception as e:
-    with progress_lock:
-      product['Percent'] = downloaded / product['Size'] if downloaded else 0
-      print_progress()
+    except Exception as e:
+      if attempt < MAX_RETRIES:
+        product['Retry'] = attempt
+        time.sleep(RETRY_DELAY)
+      else:
+        logging.info(f"MAX_RETRIES exceeded for file: {product['Name']}")
+        product['Status'] = "failed"
+        try:
+          product['Percent'] = downloaded / product['Size'] if downloaded else 0
+          print_progress()
+        except Exception as inner_e:
+          logging.error(f"Exception: {inner_e}")
 
-    msg = f"FAILED: {filename} - {e}"
-    finished_messages.append(msg)
-    return msg
+        logging.error(f"Could not download product: {product['Name']} - Exception: {e}")
+        msg = f"FAILED: {filename} - {e}"
+        finished_messages.append(msg)
+        return msg
       
 
 def human_readable_size(size_bytes):
@@ -276,7 +303,7 @@ def human_readable_size(size_bytes):
   return f"{size_bytes:.2f} PB"
   
 def progress_thread_fn():
-  while any(p['Percent'] < 1 for p in products_list):
+  while any(p['Status'] == "pending" for p in products_list):
     print_progress()
     time.sleep(0.2)
   print_progress()
@@ -346,9 +373,9 @@ def main():
   
   global products_list
   products_list = [
-    {"Id": item["Id"], "Name": item["Name"], "Size": item["ContentLength"], "Checksum": item['Checksum'], "Percent": 0}
+    {"Id": item["Id"], "Name": item["Name"], "Size": item["ContentLength"], "Checksum": item['Checksum'], "Percent": 0, "Retry": 0, "Status": "pending"}
     for item in products
-    if "Id" in item and "Name" in item and "Checksum" in item
+    if all(k in item for k in ["Id", "Name", "Checksum", "ContentLength"])
   ]
   
   if mode == "test":
