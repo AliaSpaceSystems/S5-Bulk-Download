@@ -22,8 +22,8 @@ with open(settings_path, "r", encoding="utf-8") as f:
   settings = json.load(f)
 
 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-os.makedirs(settings['log_folder'], exist_ok=True)
-log_path = os.path.join(settings['log_folder'], f"output_{ts}.log")
+os.makedirs(settings['log-folder'], exist_ok=True)
+log_path = os.path.join(settings['log-folder'], f"output_{ts}.log")
 logging.basicConfig(
   filename=log_path,
   level=logging.INFO,

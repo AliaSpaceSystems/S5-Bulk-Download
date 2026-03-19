@@ -1,6 +1,6 @@
 # S5 Bulk Download
 
-Download products from the S5 GSS corresponding to a given Product Type and included in a Publication Time window.
+Bulk download of filtered products from the S5 GSS.
 
 
 ## Version: 
@@ -31,7 +31,7 @@ py -m pip install requests
 
 The script will search for products using some filters and download them from an authenticated GSS containing S5 products and save them in a selected folder.
 The products can be filtered by PublicationDate, ContentDate, ProductType and ProcessingBaseline, setting the relative parameters. 
-In order to work you can choose to put the needed parameters in a config file or pass them as script parameters or a mix of both ways. Keep in mind that script parameters have precedence over the same parameters set into the config file.
+In order to work you can choose to set the needed parameters in a config file or pass them as script parameters or a mix of both ways. Keep in mind that script parameters have precedence over the same parameters set into the config file.
 
 Empty config.env:
 ```bash
@@ -100,3 +100,20 @@ In the last example the date is written in the two possible formats, with or wit
 ./s5_bulk_download.py -S 2026-03-03 -E 2026-03-05T18:30:00.000Z -t "SN5 L1B IRR"
 ```
 the same as before, but searching for ContentDate, instead of PublicationDate. (-S and -E instead of -s and -e).
+
+
+## Settings
+
+In the settings.json file there are some parameters user can adjust, if needed:
+```bash
+{
+  "log-folder": "./log",
+  "max-threads": 8,
+  "max-retries": 3,
+  "retry-delay": 3
+}
+```
+
+A logging system has been added that will generate a different log file for each run of the script, named with the pattern "output_<date>_<time>.log". The parameter "log-folder" indicates where to store those log files.
+The "max-threads" parameter indicates the max number of concurrent product downloads. By default thish is limited to 8.
+The parameters "max-retries" and "retry-delay" are referred to the product download request. So if the first request fails, it waits for <retry-delay> seconds and then try again for <max-retries> times.

@@ -1,5 +1,5 @@
 {
-  "log_folder": "./log",
+  "log-folder": "./log",
   "max-threads": 8,
   "max-retries": 3,
   "retry-delay": 3
