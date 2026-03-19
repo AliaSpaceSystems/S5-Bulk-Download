@@ -131,7 +131,7 @@ def fetch_products(service_url, token, filter):
       if not isFirstAttr:
         url += " and "
       if "T" in filter['publication_end_date']:
-        url += f"(PublicationDate ge {filter['publication_end_date']})"
+        url += f"(PublicationDate le {filter['publication_end_date']})"
       else:
         url += f"(PublicationDate le {filter['publication_end_date']}T23:59:59.999Z)"
       isFirstAttr = False
@@ -149,7 +149,7 @@ def fetch_products(service_url, token, filter):
       if not isFirstAttr:
         url += " and "
       if "T" in filter['content_end_date']:
-        url += f"(ContentDate/End ge {filter['content_end_date']})"
+        url += f"(ContentDate/End le {filter['content_end_date']})"
       else:
         url += f"(ContentDate/End le {filter['content_end_date']}T23:59:59.999Z)"
       isFirstAttr = False
