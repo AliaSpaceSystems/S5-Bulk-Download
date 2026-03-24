@@ -300,7 +300,7 @@ def progress_thread_fn():
   
 def main():
   parser = argparse.ArgumentParser(
-    description="Download products from the S5 GSS corresponding to a given Product Type and included in a Publication Time window",
+    description="Download products from the S5 catalogue corresponding to a given Product Type and included in a Publication Time window",
     formatter_class=argparse.RawTextHelpFormatter
   )
 
@@ -314,12 +314,12 @@ def main():
   parser.add_argument("-S", "--content-start-date", type=validate_date, help="Sensing (Content) Start Date\nFormat: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z", metavar="DATE")
   parser.add_argument("-E", "--content-end-date", type=validate_date, help="Sensing (Content) End Date\nFormat: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z", metavar="DATE")
   parser.add_argument("-b", "--baseline", help="Processing Baseline")
-  parser.add_argument("-u", "--username", help="GSS authentication username")
-  parser.add_argument("-p", "--password", help="GSS authentication password")
+  parser.add_argument("-u", "--username", help="S5 catalogue authentication username")
+  parser.add_argument("-p", "--password", help="S5 catalogue authentication password")
   parser.add_argument("-f", "--folder-name", help="Path to the folder to store the downloaded products\nLeave it empty to use default './downloads'")
-  parser.add_argument("-r", "--service-url", help="GSS url\nFormat: http(s)//<gss-domain>/odata/v2")
-  parser.add_argument("-a", "--auth-url", help="GSS Auth url\nFormat: http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token")
-  parser.add_argument("-c", "--client-id", help="GSS Auth clientId")
+  parser.add_argument("-r", "--service-url", help="S5 catalogue url\nFormat: http(s)//<catalogue-domain>/odata/v2")
+  parser.add_argument("-a", "--auth-url", help="S5 catalogue Auth url\nFormat: http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token")
+  parser.add_argument("-c", "--client-id", help="S5 catalogue Auth clientId")
   parser.add_argument("-m", "--mode", choices=['normal', 'test'], help="Script run mode, defaults to 'normal'\nSet to 'test' for a dry run, which let you check all parameters, without downloading products")
 
   args = parser.parse_args()    

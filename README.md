@@ -1,6 +1,6 @@
 # S5 Bulk Download
 
-Bulk download of filtered products from the S5 GSS.
+Bulk download of filtered products from the S5 catalogue.
 
 
 ## Version: 
@@ -29,7 +29,7 @@ py -m pip install requests
 
 ## Usage
 
-The script will search for products using some filters and download them from an authenticated GSS containing S5 products and save them in a selected folder.
+The script will search for products using some filters and download them from the authenticated catalogue containing S5 products and save them in a selected folder.
 The products can be filtered by PublicationDate, ContentDate, ProductType and ProcessingBaseline, setting the relative parameters. 
 In order to work you can choose to set the needed parameters in a config file or pass them as script parameters or a mix of both ways. Keep in mind that script parameters have precedence over the same parameters set into the config file.
 
@@ -38,7 +38,7 @@ Empty config.env:
 FOLDER_NAME=""
 USERNAME=""
 PASSWORD=""
-SERVICE_URL="http(s)://<gss-domain>/odata/v2"
+SERVICE_URL="http(s)://<catalogue-domain>/odata/v2"
 AUTH_URL="http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token"
 CLIENT_ID="<auth-client-id>"
 PRODUCT_TYPE=""
@@ -53,16 +53,16 @@ MODE=""
 Relation between script parameters and config parameters and their function:
 ```bash
 FOLDER_NAME                 -f --folder-name                : Path to the folder to store the downloaded products. Leave it empty to use default './downloads'
-USERNAME                    -u --username                   : GSS authentication username
-PASSWORD                    -p --password                   : GSS authentication password
-SERVICE_URL                 -r -service-url                 : GSS url, written following the model 'http(s)//<gss-domain>/odata/v2'
-AUTH_URL                    -a --auth-url                   : GSS Auth url, written following the model 'http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token'
-CLIENT_ID                   -c --client-id                  : GSS Auth clientId
+USERNAME                    -u --username                   : S5 catalogue authentication username
+PASSWORD                    -p --password                   : S5 catalogue authentication password
+SERVICE_URL                 -r -service-url                 : S5 catalogue url, written following the model 'http(s)//<catalogue-domain>/odata/v2'
+AUTH_URL                    -a --auth-url                   : S5 catalogue Auth url, written following the model 'http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token'
+CLIENT_ID                   -c --client-id                  : S5 catalogue Auth clientId
 PRODUCT_TYPE                -t --product-type               : Choose between: ['SN5 L1B UVR','SN5 L1B SWR','SN5 L1B NIR','SN5 L1B IRR']
 PUBLICATION_START_DATE      -s --publication-start-date     : Publication Start Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
 PUBLICATION_END_DATE        -e --publication-end-date       : Publication End Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
-CONTENT_START_DATE          -S --content-start-date         : Content Sensing Start Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
-CONTENT_END_DATE            -E --content-end-date           : Publication End Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
+CONTENT_START_DATE          -S --content-start-date         : Content (Sensing) Start Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
+CONTENT_END_DATE            -E --content-end-date           : Content (Sensing) End Date - Format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.000Z
 BASELINE                    -b --baseline                   : Processing Baseline
 MODE                        -m --mode                       : Choose between: ['normal', 'test']. Script run mode, defaults to 'normal'. Set to 'test' for a dry run, which let you check all parameters, without downloading products
                             -V --verbose                    : Print more info, as the output OData filter used.
