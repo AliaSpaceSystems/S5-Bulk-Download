@@ -11,6 +11,7 @@ import json
 import re
 import hashlib
 import logging
+import csv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Loading script settings:
@@ -29,6 +30,9 @@ logging.basicConfig(
   level=logging.INFO,
   format="%(asctime)s [%(levelname)s] %(message)s",
 )
+
+os.makedirs(settings['csv-folder'], exist_ok=True)
+csv_path = os.path.join(settings['csv-folder'], f"output_{ts}.csv")
 
 products_list = []
 progress_lock = threading.Lock()
@@ -107,7 +111,7 @@ def validate_date(value):
 def fetch_products(service_url, token, filter):
   try:
     if filter['verbose']:
-      print(f"Fetching products with filter: {filter}")
+      print(f"Fetching products with filter: {filter}\n")
     url = f"{service_url}/Products"
     if filter['publication_start_date'] or filter['publication_end_date'] or filter['content_start_date'] or filter['content_end_date'] or filter['product_type'] or filter['baseline']:
       url += "?$expand=Attributes&$filter="
@@ -169,7 +173,7 @@ def fetch_products(service_url, token, filter):
       isFirstAttr = False
     
     if filter['verbose']:
-      print(f"Searching for products using url: {url}")
+      print(f"Search url: {url}\n")
     
     headers = {"Authorization": f"Bearer {token}"}
     r = requests.get(url, headers=headers)
@@ -316,16 +320,16 @@ def main():
   parser.add_argument("-b", "--baseline", help="Processing Baseline")
   parser.add_argument("-u", "--username", help="S5 catalogue authentication username")
   parser.add_argument("-p", "--password", help="S5 catalogue authentication password")
-  parser.add_argument("-f", "--folder-name", help="Path to the folder to store the downloaded products\nLeave it empty to use default './downloads'")
+  parser.add_argument("-f", "--download-folder-name", help="Path to the folder to store the downloaded products\nLeave it empty to use default './downloads'")
   parser.add_argument("-r", "--service-url", help="S5 catalogue url\nFormat: http(s)//<catalogue-domain>/odata/v2")
   parser.add_argument("-a", "--auth-url", help="S5 catalogue Auth url\nFormat: http(s)//<auth-domain>/auth/realms/<realm-name>/protocol/openid-connect/token")
   parser.add_argument("-c", "--client-id", help="S5 catalogue Auth clientId")
-  parser.add_argument("-m", "--mode", choices=['normal', 'test'], help="Script run mode, defaults to 'normal'\nSet to 'test' for a dry run, which let you check all parameters, without downloading products")
-
+  parser.add_argument("-d", "--dry-run", action="store_true", help="Perform a dry run of the script, creating a csv file output with detailed informations about the products found with the current filters, but without downloading them")
+  
   args = parser.parse_args()    
   config = load_config()
 
-  folder = get_param(args.folder_name, config.get("FOLDER_NAME"), "folder-name", default="./downloads")
+  download_folder = get_param(args.download_folder_name, config.get("DOWNLOAD_FOLDER_NAME"), "download-folder-name", default="./downloads")
   username = get_param(args.username, config.get("USERNAME"), "username")
   password = get_param(args.password, config.get("PASSWORD"), "password")
   service_url = get_param(args.service_url, config.get("SERVICE_URL"), "service-url")
@@ -337,10 +341,10 @@ def main():
   content_start_date = get_param(args.content_start_date, config.get("CONTENT_START_DATE"), "content-start-date", False)
   content_end_date = get_param(args.content_end_date, config.get("CONTENT_END_DATE"), "content-end-date", False)
   baseline = get_param(args.baseline, config.get("BASELINE"), "baseline", False)
-  mode = get_param(args.mode, config.get("MODE"), "mode", default="normal")
+  dryRun = args.dry_run
   verbose = args.verbose
   
-  os.makedirs(folder, exist_ok=True)
+  os.makedirs(download_folder, exist_ok=True)
 
   token = get_token(auth_url, username, password, client_id)
   filter = {
@@ -357,8 +361,6 @@ def main():
     token,
     filter
   )
-
-  print(f"Products found: {len(products)}")
   
   global products_list
   products_list = [
@@ -367,21 +369,28 @@ def main():
     if all(k in item for k in ["Id", "Name", "Checksum", "ContentLength"])
   ]
   
-  if mode == "test":
-    print("This script was run in 'test' mode, so no download will be performed.")
+  global total_size
+  total_size = sum(item.get("ContentLength", 0) for item in products)
+  if dryRun == True:
+    print("WARNING: 'dry run' mode selected.\nNo download will be performed.\n")
+    print(f"Products found: {len(products)}")
+    print(f"Total_size: {total_size} - {human_readable_size(total_size)}\n")
+    print(f"More details on the products found in the csv file: {csv_path}")
+    
+    with open(csv_path, "w", newline="") as f:      
+      writer = csv.writer(f)
+      writer.writerow(["Name", "Id", "Sensing Start", "Sensing Stop", "Publication Date", "Size"])
+      for p in products:
+          writer.writerow([p["Name"], p["Id"], p["ContentDate"]["Start"], p["ContentDate"]["End"], p["PublicationDate"], p["ContentLength"]])
   else:
-    global total_size
-    total_size = sum(
-      p['Size']
-      for p in products_list
-    )
-    print(f"total_size: {total_size} - {human_readable_size(total_size)}")
+    print(f"Products found: {len(products)}")
+    print(f"Total_size: {total_size} - {human_readable_size(total_size)}")
     for _ in range(len(products_list) + 4):
       print()
         
     finished_messages = []
     with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:          
-      futures = [executor.submit(download_product, service_url, p, token, folder, finished_messages) for p in products_list]
+      futures = [executor.submit(download_product, service_url, p, token, download_folder, finished_messages) for p in products_list]
       t = threading.Thread(target=progress_thread_fn)
       t.start()
       for future in futures:

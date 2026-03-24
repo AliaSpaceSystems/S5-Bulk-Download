@@ -1,5 +1,6 @@
 {
   "log-folder": "./log",
+  "csv-folder": "./csv-output",
   "max-threads": 8,
   "max-retries": 3,
   "retry-delay": 3
