@@ -107,6 +107,7 @@ In the settings.json file there are some parameters user can adjust, if needed:
 ```bash
 {
   "log-folder": "./log",
+  "csv-folder": "./csv-output",
   "max-threads": 8,
   "max-retries": 3,
   "retry-delay": 3
@@ -114,5 +115,6 @@ In the settings.json file there are some parameters user can adjust, if needed:
 ```
 
 A logging system has been added that will generate a different log file for each run of the script, named with the pattern "output_<date>_<time>.log". The parameter "log-folder" indicates where to store those log files.
+The parameter "csv-folder" sets the path where to save the csv output file, in case of dry-run of the script.
 The "max-threads" parameter indicates the max number of concurrent product downloads. By default thish is limited to 8.
 The parameters "max-retries" and "retry-delay" are referred to the product download request. So if the first request fails, it waits for <retry-delay> seconds and then try again for <max-retries> times.
