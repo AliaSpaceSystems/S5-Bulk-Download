@@ -5,7 +5,7 @@ Bulk download of filtered products from the S5 catalogue.
 
 ## Version: 
 
-Version: 1.0.1
+Version: 1.0.2
 
 
 ## Install
